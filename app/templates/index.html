@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nuts &amp; Bolts Live</title>
+<style>
+:root{--bg:#0e1116;--card:#171b22;--line:#262c36;--tx:#e6e9ee;--mut:#8b94a3;--ok:#3ddc84;--bad:#ff5c5c;--warn:#ffb400;
+--bolt:#2878ff;--nut:#ffb400;--screw:#5ae65a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--bad);margin-right:8px}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+main{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;padding:16px 20px}
+@media(max-width:950px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{margin:0 0 10px;font-size:12px;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;font-weight:600;display:flex;justify-content:space-between}
+#vid{width:100%;border-radius:8px;display:block;background:#000;aspect-ratio:4/3}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.m{background:var(--bg);border-radius:10px;padding:12px}
+.m span{color:var(--mut);font-size:12px;display:block}.m b{font-size:28px;font-variant-numeric:tabular-nums}
+.m small{color:var(--mut);font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:var(--bg);border-radius:10px;padding:12px;border-left:4px solid var(--c)}
+.kpi b{display:block;font-size:34px;font-variant-numeric:tabular-nums}.kpi span{color:var(--mut);font-size:12px}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .4s}
+canvas{width:100%;height:150px;display:block}
+button{background:var(--line);color:var(--tx);border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font:inherit}
+button:hover{background:#333b48}.go{background:#1f7a46}.go:hover{background:#27935a}.stop{background:#9c2f2f}.stop:hover{background:#b83a3a}
+button:disabled{opacity:.4;cursor:not-allowed}
+a.btn{background:var(--line);color:var(--tx);border-radius:8px;padding:5px 10px;text-decoration:none;font-size:13px}
+a.btn:hover{background:#333b48}
+.ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}input[type=range]{flex:1;min-width:120px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{color:var(--mut);font-weight:500;text-align:left;padding:4px 6px}td{padding:6px;border-top:1px solid var(--line)}
+.scroll{max-height:230px;overflow:auto}
+.ev{font-size:13px;padding:5px 0;border-top:1px solid var(--line);display:flex;gap:8px}.ev:first-child{border:0}
+.ev time{color:var(--mut);white-space:nowrap}.k-warn{color:var(--warn)}.k-start{color:var(--ok)}.k-stop{color:var(--bad)}
+#err{color:var(--bad);font-size:13px;margin-top:8px;min-height:1em}
+</style></head><body>
+<header><h1>Nuts &amp; Bolts · Live Inspection</h1>
+ <div class="ctl"><span><span class="dot" id="dot"></span><span id="status">connecting…</span></span></div></header>
+<main>
+ <div class="col">
+  <div class="card"><h2><span>Live camera</span><span id="camname"></span></h2><img id="vid" alt="live" style="display:none"><div id="off" style="aspect-ratio:4/3;background:#000;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#8b94a3">Camera stopped — press Start</div><div id="err"></div>
+   <div style="margin-top:12px;display:flex;gap:10px"><button id="start" class="go">▶ Start</button><button id="stopb" class="stop">■ Stop</button></div></div>
+  <div class="card"><h2>Object count · last 90 s</h2><canvas id="ch_count"></canvas></div>
+  <div class="card"><h2>Latency &amp; FPS · last 90 s</h2><canvas id="ch_perf"></canvas></div>
+  <div class="card"><h2><span>Session history</span><span>pick a session → report</span></h2>
+   <div class="scroll"><table><thead><tr><th>#</th><th>Started</th><th>Duration</th><th>FPS</th><th>Latency</th><th>Conf</th><th>Peak</th><th></th></tr></thead><tbody id="sess"></tbody></table></div></div>
+ </div>
+ <div class="col">
+  <div class="card"><h2>Object count</h2><div class="kpis">
+   <div class="kpi" style="--c:var(--bolt)"><b id="c_bolt">0</b><span>bolts</span></div>
+   <div class="kpi" style="--c:var(--nut)"><b id="c_nut">0</b><span>nuts</span></div>
+   <div class="kpi" style="--c:var(--screw)"><b id="c_screw">0</b><span>screws</span></div></div>
+   <div style="margin-top:10px;color:var(--mut);font-size:13px">Total in view <b id="total" style="color:var(--tx)">0</b> · peak <span id="peak">–</span>
+   <button id="reset" style="padding:3px 8px;font-size:12px;margin-left:6px">reset</button></div></div>
+  <div class="card"><h2>Accuracy</h2><div class="grid4">
+   <div class="m"><span>Live mean confidence</span><b id="conf">–</b><div class="bar"><i id="confbar"></i></div></div>
+   <div class="m"><span>Model mAP50 (own camera)</span><b id="map">–</b><small>from training run</small></div></div></div>
+  <div class="card"><h2>Performance</h2><div class="grid4">
+   <div class="m"><span>Video FPS (locked 15)</span><b id="vfps">0</b></div>
+   <div class="m"><span>Detection FPS</span><b id="fps">0</b></div>
+   <div class="m"><span>Latency</span><b id="lat">0</b><small> ms / frame</small></div>
+   <div class="m"><span>Runtime</span><b id="up">0s</b></div>
+   <div class="m"><span>Frames processed</span><b id="frames">0</b></div></div></div>
+  <div class="card"><h2>Controls</h2><div class="ctl">
+   <label>Confidence threshold <b id="tv">35%</b></label><input id="th" type="range" min="10" max="90" value="35"></div></div>
+  <div class="card"><h2><span>Event log</span><a class="btn" id="rep" href="#" target="_blank">Report (current session)</a></h2>
+   <div class="scroll" id="log"></div></div>
+ </div>
+</main>
+<script>
+const C={bolt:'#2878ff',nut:'#ffb400',screw:'#5ae65a'},$=id=>document.getElementById(id);
+const fmtDur=u=>u>=3600?Math.floor(u/3600)+'h '+Math.floor(u%3600/60)+'m':u>=60?Math.floor(u/60)+'m '+u%60+'s':u+'s';
+const hm=t=>new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+let running=false,last=0,sid=null,lastSess=0;
+function lines(id,series,keys){const cv=$(id),r=devicePixelRatio||1,w=cv.clientWidth,ht=cv.clientHeight;
+ cv.width=w*r;cv.height=ht*r;const g=cv.getContext('2d');g.scale(r,r);g.clearRect(0,0,w,ht);
+ if(series.length<2)return;let mx=1;keys.forEach(k=>series.forEach(p=>mx=Math.max(mx,p[k.f](p)||0)));
+ g.strokeStyle='#262c36';g.fillStyle='#8b94a3';g.font='11px system-ui';
+ for(let i=0;i<=4;i++){const y=8+(ht-24)*i/4;g.beginPath();g.moveTo(34,y);g.lineTo(w,y);g.stroke();g.fillText(Math.round(mx*(1-i/4)),2,y+4)}
+ keys.forEach(k=>{g.strokeStyle=k.c;g.lineWidth=2;g.beginPath();
+  series.forEach((p,i)=>{const x=34+(w-34)*i/(series.length-1),y=8+(ht-24)*(1-(k.f(p)||0)/mx);i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke()});
+ let lx=34;keys.forEach(k=>{g.fillStyle=k.c;g.fillRect(lx,ht-9,10,3);g.fillStyle='#8b94a3';g.fillText(k.n,lx+14,ht-4);lx+=14+g.measureText(k.n).width+14})}
+function render(s){last=Date.now();running=s.running;sid=s.session;
+ $('dot').classList.toggle('on',s.running);$('status').textContent=s.running?'live':'stopped';
+ $('start').disabled=s.running;$('stopb').disabled=!s.running;setFeed(s.running);
+ $('camname').textContent=s.camera_name;$('err').textContent=s.error;
+ for(const k in C)$('c_'+k).textContent=s.counts[k]||0;
+ $('total').textContent=s.total;$('peak').textContent=Object.entries(s.peak).map(([k,v])=>k+' '+v).join(' · ')||'–';
+ $('conf').textContent=s.total?Math.round(s.avg_conf*100)+'%':'–';$('confbar').style.width=(s.total?s.avg_conf*100:0)+'%';
+ $('map').textContent=Math.round(s.map50*1000)/10+'%';
+ $('fps').textContent=s.fps;$('vfps').textContent=s.video_fps;$('lat').textContent=s.latency_ms;$('up').textContent=fmtDur(s.uptime);$('frames').textContent=s.frames;
+ $('rep').href='/report?session='+(s.session||0);
+ $('log').innerHTML=s.recent.map(e=>`<div class="ev"><time>${hm(e.ts)}</time><span class="k-${e.kind}">${e.msg}</span></div>`).join('')||'<div class="ev">no events yet</div>';
+ lines('ch_count',s.series,Object.keys(C).map(k=>({n:k,c:C[k],f:p=>p.counts[k]})));
+ lines('ch_perf',s.series,[{n:'FPS',c:'#3ddc84',f:p=>p.fps},{n:'latency ms',c:'#ff7a59',f:p=>p.latency/100}]);
+ if(Date.now()-lastSess>5000)loadSess()}
+async function loadSess(){lastSess=Date.now();const r=await (await fetch('/api/sessions')).json();
+ $('sess').innerHTML=r.map(x=>{const d=Math.round((x.end||Date.now()/1000)-x.start);
+  return `<tr><td>${x.id}</td><td>${new Date(x.start*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${fmtDur(d)}${x.end?'':' ●'}</td><td>${x.fps??'–'}</td><td>${x.latency??'–'} ms</td><td>${x.conf?Math.round(x.conf*100)+'%':'–'}</td><td>${x.peak_total??'–'}</td>
+  <td><a class="btn" target="_blank" href="/report?session=${x.id}">report</a> <a class="btn" href="/report.csv?session=${x.id}">csv</a></td></tr>`}).join('')}
+const es=new EventSource('/events');es.onmessage=e=>render(JSON.parse(e.data));
+setInterval(()=>{if(Date.now()-last>3000){$('dot').classList.remove('on');$('status').textContent='server offline'}},1000);
+const post=b=>fetch('/api/control',{method:'POST',body:JSON.stringify(b)});
+function setFeed(on){const v=$('vid');if(on&&!v.getAttribute('src')){v.src='/video?'+Date.now()}
+ if(!on&&v.getAttribute('src')){v.removeAttribute('src')}
+ v.style.display=on?'block':'none';$('off').style.display=on?'none':'flex'}
+$('start').onclick=()=>post({action:'start'});$('stopb').onclick=()=>post({action:'stop'});
+$('th').oninput=e=>{$('tv').textContent=e.target.value+'%';post({conf:e.target.value/100})};
+$('reset').onclick=()=>post({reset:true});
+</script></body></html>

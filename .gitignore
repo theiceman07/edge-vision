@@ -1,0 +1,13 @@
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.log
+history.db
+reports/
+runs/
+app/ds*/
+app/mydata/
+*.zip
+*.bak

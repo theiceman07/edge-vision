@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Inspection report · session {{ s.id }}</title>
+<style>
+body{font:14px system-ui,sans-serif;color:#1b1f27;max-width:860px;margin:28px auto;padding:0 20px}
+h1{font-size:24px;margin:0}h2{font-size:15px;margin:26px 0 8px;border-bottom:1px solid #d6dae0;padding-bottom:4px}
+.sub{color:#677081}table{border-collapse:collapse;width:100%}th,td{padding:6px 8px;text-align:left;border-bottom:1px solid #e6e9ee}
+th{color:#677081;font-weight:600;font-size:12px}.kpi{display:flex;gap:12px;flex-wrap:wrap}
+.kpi div{flex:1;min-width:130px;border:1px solid #d6dae0;border-radius:8px;padding:10px}.kpi b{font-size:22px;display:block}
+.kpi span{color:#677081;font-size:12px}button{padding:6px 14px;margin-top:10px}
+@media print{button{display:none}}
+</style></head><body>
+<h1>Nuts &amp; Bolts inspection report</h1>
+<div class="sub">Session {{ s.id }} · {{ fmt(s.start) }} → {{ fmt(s.end) }} · {{ s.camera }} · model {{ s.model }} · generated {{ now }}</div>
+<button onclick="print()">Print / save as PDF</button>
+
+<h2>Summary</h2>
+<div class="kpi">
+ <div><b>{{ '%dm %ds' % (st.duration//60, st.duration%60) }}</b><span>runtime</span></div>
+ <div><b>{{ '%.1f' % st.fps }}</b><span>mean FPS</span></div>
+ <div><b>{{ '%.0f' % st.lat }} ms</b><span>mean latency (p95 {{ '%.0f' % st.p95 }} ms)</span></div>
+ <div><b>{{ '%.0f' % (st.conf*100) }}%</b><span>mean detection confidence</span></div>
+ <div><b>{{ '%.1f' % (map50*100) }}%</b><span>model mAP50 (validation)</span></div>
+</div>
+
+<h2>Object counts</h2>
+<table><tr><th>Class</th><th>Peak in view</th><th>Average in view</th></tr>
+{% for c in classes %}<tr><td><span style="color:{{ colors.get(c,'#555') }}">●</span> {{ c }}</td><td>{{ st.peak[c] }}</td><td>{{ '%.1f' % st.avg[c] }}</td></tr>{% endfor %}</table>
+<p class="sub">Counts are objects visible in the frame at each second, not a cumulative tally. Overlapping piles may be under- or over-counted.</p>
+
+<h2>Count over time</h2>
+{% set W=820 %}{% set H=180 %}
+{% set mx = (m|map(attribute='total')|max) if m else 1 %}{% set mx = mx if mx>0 else 1 %}
+<svg viewBox="0 0 {{ W }} {{ H+20 }}" width="100%">
+ <line x1="30" y1="{{ H }}" x2="{{ W }}" y2="{{ H }}" stroke="#bbb"/>
+ <text x="0" y="12" font-size="11" fill="#677081">{{ mx }}</text><text x="0" y="{{ H }}" font-size="11" fill="#677081">0</text>
+ {% for c in classes %}{% if m|length > 1 %}
+ <polyline fill="none" stroke="{{ colors.get(c,'#555') }}" stroke-width="2" points="{% for r in m %}{{ 30 + (W-30)*loop.index0/(m|length-1) }},{{ H - (H-10)*r.counts.get(c,0)/mx }} {% endfor %}"/>
+ {% endif %}{% endfor %}
+</svg>
+<div class="sub">{% for c in classes %}<span style="color:{{ colors.get(c,'#555') }}">■</span> {{ c }} &nbsp;{% endfor %}</div>
+
+<h2>Event log</h2>
+<table><tr><th>Time</th><th>Type</th><th>Event</th></tr>
+{% for e in ev %}<tr><td>{{ fmt(e.ts) }}</td><td>{{ e.kind }}</td><td>{{ e.msg }}</td></tr>{% else %}<tr><td colspan="3">No events.</td></tr>{% endfor %}</table>
+</body></html>

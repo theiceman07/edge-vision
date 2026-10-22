@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuts &amp; Bolts Detection Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e8eaed;
+    --muted: #8a93a3;
+    --accent: #ffcc33;
+    --good: #35d07f;
+    --bad: #ff5c5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .dot.live { background: var(--good); box-shadow: 0 0 8px var(--good); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    gap: 16px;
+    padding: 16px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .video-wrap {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .video-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .controls { display: flex; gap: 10px; margin-top: 14px; }
+  button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  #startBtn { background: var(--good); color: #06240f; }
+  #stopBtn { background: var(--bad); color: #350000; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .metric {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .metric .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .metric .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .metric .value span { font-size: 14px; color: var(--muted); font-weight: 400; }
+
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  td.actions a {
+    color: var(--accent);
+    text-decoration: none;
+    margin-right: 8px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  td.actions a:hover { background: var(--panel-2); }
+
+  .history-wrap { overflow-x: auto; margin-top: 8px; }
+  .full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nuts &amp; Bolts Detection Dashboard</h1>
+  <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Stopped</span></div>
+</header>
+
+<div class="layout">
+  <div class="panel">
+    <div class="video-wrap">
+      <img src="/video_feed" alt="live camera feed">
+    </div>
+    <div class="controls">
+      <button id="startBtn" onclick="startFeed()">▶ Start</button>
+      <button id="stopBtn" onclick="stopFeed()" disabled>■ Stop</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Live Metrics</h2>
+    <div class="metrics-grid">
+      <div class="metric"><div class="label">Accuracy</div><div class="value" id="mAccuracy">0.0<span>%</span></div></div>
+      <div class="metric"><div class="label">Latency</div><div class="value" id="mLatency">0.0<span>ms</span></div></div>
+      <div class="metric"><div class="label">FPS</div><div class="value" id="mFps">0.0</div></div>
+      <div class="metric"><div class="label">Object Count</div><div class="value" id="mObjects">0</div></div>
+      <div class="metric full-width"><div class="label">Runtime</div><div class="value" id="mRuntime">00:00:00</div></div>
+    </div>
+  </div>
+
+  <div class="panel full-width">
+    <h2>Session History</h2>
+    <div class="history-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Start</th><th>End</th><th>Runtime (s)</th>
+            <th>Avg FPS</th><th>Avg Latency (ms)</th><th>Avg Accuracy</th>
+            <th>Frames</th><th>Bolts</th><th>Nuts</th><th>Report</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let polling = null;
+
+function fmtRuntime(s) {
+  s = Math.floor(s);
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const sec = String(s % 60).padStart(2, '0');
+  return `${h}:${m}:${sec}`;
+}
+
+async function refreshStatus() {
+  const res = await fetch('/api/status');
+  const s = await res.json();
+  if (!s.running) { s.accuracy = 0; s.latency_ms = 0; s.fps = 0; s.object_count = 0; }
+  document.getElementById('mAccuracy').innerHTML = s.accuracy.toFixed(1) + '<span>%</span>';
+  document.getElementById('mLatency').innerHTML = s.latency_ms.toFixed(1) + '<span>ms</span>';
+  document.getElementById('mFps').textContent = s.fps.toFixed(1);
+  document.getElementById('mObjects').textContent = s.object_count;
+  document.getElementById('mRuntime').textContent = fmtRuntime(s.runtime_s);
+
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.classList.toggle('live', s.running);
+  text.textContent = s.running ? 'Live' : 'Stopped';
+  document.getElementById('startBtn').disabled = s.running;
+  document.getElementById('stopBtn').disabled = !s.running;
+}
+
+async function refreshHistory() {
+  const res = await fetch('/api/history');
+  const rows = await res.json();
+  const body = document.getElementById('historyBody');
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.id}</td>
+      <td>${new Date(r.start_time).toLocaleString()}</td>
+      <td>${new Date(r.end_time).toLocaleString()}</td>
+      <td>${r.runtime_s.toFixed(1)}</td>
+      <td>${r.avg_fps.toFixed(1)}</td>
+      <td>${r.avg_latency_ms.toFixed(1)}</td>
+      <td>${(r.avg_accuracy * 100).toFixed(1)}%</td>
+      <td>${r.total_frames}</td>
+      <td>${r.bolt_count}</td>
+      <td>${r.nut_count}</td>
+      <td class="actions">
+        <a href="/api/report/${r.id}?format=pdf" target="_blank">PDF</a>
+        <a href="/api/report/${r.id}?format=csv" target="_blank">CSV</a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function startFeed() {
+  await fetch('/api/start', { method: 'POST' });
+  refreshStatus();
+}
+
+async function stopFeed() {
+  await fetch('/api/stop', { method: 'POST' });
+  refreshStatus();
+  refreshHistory();
+}
+
+refreshStatus();
+refreshHistory();
+setInterval(refreshStatus, 1000);
+setInterval(refreshHistory, 5000);
+</script>
+
+</body>
+</html>
