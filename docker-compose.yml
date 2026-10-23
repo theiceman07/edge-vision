@@ -1,0 +1,11 @@
+# Put YOUR trained model at app/best.onnx before building (not included in this repo).
+services:
+  vision:
+    build: .
+    image: edge-vision
+    restart: unless-stopped        # comes back after crash and after power cycle (docker enabled at boot)
+    ports: ["5000:5000"]
+    devices:
+      - /dev/video0:/dev/video0    # USB camera
+      - /dev/gpiochip4:/dev/gpiochip4   # Pi 5 GPIO (check with: ls /dev/gpiochip*)
+    group_add: ["video"]

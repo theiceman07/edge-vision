@@ -1,30 +1,57 @@
-> **Origin:** this repo starts from code in https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6). Model weights from that repo are NOT included. All measurements, datasets and results added here are produced by me on my own device; see the commit history.
+> **Origin:** this repo starts from code in https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6). The weights in `app/` were trained here (see below); all numbers marked *PC* were measured on a laptop, not the Pi.
 
-# Nuts & Bolts detection on Raspberry Pi 5 (edge CV)
+# Edge Vision: bolt/nut detection on Raspberry Pi 5
 
-Real-time nut/bolt detection from a USB webcam with a live web dashboard, status LEDs, session history and PDF/CSV reports.
+USB camera -> YOLO11n (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live web dashboard, optional MQTT, session history, PDF/CSV reports.
 
-- **Model:** YOLO11n, 2 classes (`bolt`, `nut`), input 320 px, exported to ONNX. Own-camera validation mAP50 = 0.80 (bolt 0.77, nut 0.83); about 55 ms/frame on a Pi 5 CPU.
-- **Video:** locked 15 FPS stream, detection runs separately.
-- **LEDs (BCM):** GPIO17 green = nut only, GPIO27 red = bolt only, GPIO22 blue = both (priority). Each LED: GPIO -> 330 ohm -> LED(+), LED(-) -> GND.
+## Status
+| Done and measured (PC) | Still to do on the Pi / with your own part |
+|---|---|
+| Model trained on Colab T4, test mAP50 0.972 | FPS, latency, CPU %, temperature on the Pi |
+| PyTorch and ONNX predictions identical | Your own photos / printed part, your own data check |
+| 15 FPS locked stream + 15 FPS detection cap tested with a fake camera | Camera, LEDs, Docker from cold boot, auto-start after power cycle |
+| Robustness and error analysis (see `docs/`) | INT8 / TFLite conversion, before/after accuracy |
 
-## Run
+## Model
+- YOLO11n, 2 classes (`bolt`, `nut`), input 320, trained on *Bolts and Nuts v8* by Kim (CC BY 4.0). See `docs/DATA_CARD.md`.
+- Test set (PyTorch, Colab): precision 0.923, recall 0.960, mAP50 0.972, mAP50-95 0.589. Validation: mAP50 0.959.
+- Weights: `app/best.pt`, `app/best.onnx` (5.5 MB each). Full numbers: `training/results/RESULTS.md`, `docs/MODEL_VALIDATION.md`.
+- Recommended confidence ~0.4 (best F1 on the test set: 0.35-0.45). Weak spots: heavy JPEG compression, objects far smaller than in training (keep camera height fixed), overlapping or very thin bolts.
+- Not validated: Pi speed, your camera/lighting, your own part.
+
+## Install and run
 ```bash
-# old dashboard (OpenCV capture + onnxruntime, drives the LEDs, PDF/CSV reports) - from repo root
-python dashboard.py            # http://<pi-ip>:5000
-
-# newer server (separate video/detection threads, sessions, events, HTML report) - from app/
-cd app && python server.py     # http://<pi-ip>:5000  (same port: run only one at a time)
+pip install ultralytics onnxruntime opencv-python flask fpdf2 gpiozero lgpio paho-mqtt   # CPU-only torch on the Pi
+cd app && python server.py --model best.onnx --map50 0.972     # http://<pi-ip>:5000
 ```
-Install: `pip install ultralytics onnxruntime opencv-python flask fpdf2 gpiozero lgpio` (use CPU-only torch on the Pi).
+Options: `--camera N`, `--imgsz 320`, `--det-fps 15` (detection cap, default 15, `0` = unlimited), `--map50 <your measured value>`
+(shows 0 until set), `--no-autostart`, `--mqtt-host --mqtt-port 8883 --mqtt-ca ca.crt --mqtt-topic factory/vision/detection`
+(set `MQTT_USER` / `MQTT_PASSWORD` in the environment). The video stream is locked at 15 FPS (`VIDEO_FPS`).
+`dashboard.py` in the repo root is the older single-file dashboard; use `app/server.py`.
 
-## Camera focus
-`app/focus.txt` holds a fixed manual focus value (autofocus hunts on a plain table). It depends on camera height - re-run `python calibrate_focus.py` (from `app/`) after moving the camera.
+## LEDs (BCM)
+GPIO17 green = nut only, GPIO27 red = bolt only, GPIO22 blue = both (priority); each LED via 330 ohm to GND. An LED changes only after
+2 consecutive agreeing frames (`app/leds.py`). If GPIO is unavailable the app keeps running with LEDs disabled. Rule sheet: `docs/M3_decision_rule_sheet.md`.
 
-## Training pipeline (`app/`)
-1. `capture_data.py` - collect photos from your own camera (`n` nuts, `b` bolts, `e` empty/negatives).
-2. `autolabel.py` - FastSAM proposals -> YOLO labels; `review.py` - quick browser tool to fix them by hand.
-3. `build_final.py` - merge own-camera photos with other data into `ds3/`.
-4. `train_colab_v3.ipynb` - train YOLO11n @320 on a Colab T4, export `best.onnx`.
+## Docker and auto-start
+- `docker compose up -d` (uses `Dockerfile`, maps `/dev/video0` and the Pi 5 GPIO chip; check `ls /dev/gpiochip*`). Needs `app/best.onnx`. Untested on hardware.
+- `deploy/vision.service`: systemd unit; edit user/paths, `sudo systemctl enable --now vision`, then reboot to prove auto-start.
 
-Datasets and photos are not included in this repo.
+## Tools (`tools/`)
+- `bench_inference.py`: latency/FPS of an ONNX model on the machine it runs on (writes JSON).
+- `realtime_fps_test.py`: paced run at a locked FPS (default 15): skipped frames, latency, precision/recall. Run it on the Pi for 10 minutes and note the temperature before/after.
+- `eval_detections.py`: accuracy from a CSV of truth vs predicted.
+
+## Training (`training/`, `docs/COLAB_TRAINING.md`)
+Colab notebook, results, confusion matrices, `errors_analysis.py` (wrong detections, 10 written up in `training/errors/WRONG_DETECTIONS.md`),
+`robustness.py`. Original data tools in `app/`: `capture_data.py`, `autolabel.py`, `review.py`, `merge_ds.py`, `build_final.py`, `calibrate_focus.py`
+(`app/focus.txt` is a fixed manual focus; recalibrate after moving the camera).
+
+## Docs
+`docs/DATA_CARD.md`, `docs/MODEL_VALIDATION.md`, `docs/M3_decision_rule_sheet.md`, `docs/ARCHITECTURE.md`, `docs/COLAB_TRAINING.md`.
+
+## Rules for results in this repo
+Only commit numbers you measured yourself, with the machine named. Datasets and photos are not stored here.
+
+## Team workflow
+Shared repo with collaborators. Shared work on `main`; individually assessed milestones go on your own branch `ind/<your-name>`. See `docs/BRANCHING.md`.

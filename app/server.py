@@ -9,10 +9,11 @@ from datetime import datetime
 import cv2
 import numpy as np
 from leds import Leds
+from mqtt_pub import DetectionPublisher
 from flask import Flask, Response, jsonify, render_template, request
 
 COLORS = {"bolt": (255, 120, 40), "nut": (0, 180, 255), "screw": (80, 230, 90)}  # BGR
-MODEL_MAP50 = 0.798        # mAP50 on held-out own-camera photos (yolo11n @320)
+MODEL_MAP50 = float(os.environ.get("MODEL_MAP50", 0))   # set to YOUR measured mAP50 (env MODEL_MAP50 or --map50); 0 = not set
 DB = "history.db"
 
 app = Flask(__name__)
@@ -25,6 +26,7 @@ state = {
     "classes": [], "recent": [],
 }
 leds = Leds()          # green=nut, red=bolt, blue=both (GPIO 17/27/22)
+publisher = DetectionPublisher()   # replaced in __main__ if --mqtt-host is given
 latest = {"jpeg": None, "cam": None, "boxes": [], "names": {}}
 want_run = threading.Event()
 
@@ -154,7 +156,10 @@ def worker():
         log_event("start", "Detection started")
         fps, last_ts, last_db, last_counts, last_change, last_warn = 0.0, 0, 0, None, 0, 0
         confs, lats = [], []
+        det_next, last_t0 = 0.0, 0.0
         while want_run.is_set():
+            if DET_PERIOD and det_next > time.time():
+                time.sleep(det_next - time.time())   # cap detection rate, read a fresh frame afterwards
             frame, fts = cam.read()
             if frame is None or fts == last_ts:
                 if time.time() - max(last_ts, state["started"]) > 3:
@@ -177,6 +182,8 @@ def worker():
                 continue
             last_ts = fts
             t0 = time.time()
+            # fixed deadline grid so sleep/read overshoot doesn't accumulate; resync if we fall a full period behind
+            det_next = det_next + DET_PERIOD if det_next and t0 - det_next < DET_PERIOD else t0 + DET_PERIOD
             r = model.predict(frame, imgsz=cfg["imgsz"], conf=state["conf"], iou=0.45,
                               agnostic_nms=True, verbose=False)[0]
             lat = (time.time() - t0) * 1000
@@ -187,8 +194,10 @@ def worker():
             latest["boxes"] = boxes
             leds.update(counts.get("nut", 0), counts.get("bolt", 0))
             state["led"] = leds.state
+            publisher.publish(counts, len(boxes), leds.state, round(lat, 1), round(fps, 1))
             now = time.time()
-            inst = 1 / max(now - t0, 1e-3)
+            inst = 1 / max(t0 - last_t0, 1e-3) if last_t0 else 1 / max(now - t0, 1e-3)   # loop rate, includes the cap
+            last_t0 = t0
             fps = 0.8 * fps + 0.2 * inst if fps else inst
             conf = float(np.mean([b[4] for b in boxes])) if boxes else 0.0
             with lock:
@@ -239,6 +248,7 @@ def index():
 
 
 VIDEO_FPS = 15
+DET_PERIOD = 1 / 15       # detection cap (seconds per frame); 0 = unlimited. Set with --det-fps
 
 
 def streamer():
@@ -385,8 +395,19 @@ if __name__ == "__main__":
     ap.add_argument("--imgsz", type=int, default=320)
     ap.add_argument("--port", type=int, default=5000)
     ap.add_argument("--no-autostart", action="store_true")
+    ap.add_argument("--det-fps", type=float, default=15.0, help="cap detection FPS (0 = unlimited)")
+    ap.add_argument("--map50", type=float, default=None, help="your measured mAP50 (0-1)")
+    ap.add_argument("--mqtt-host", default=None)
+    ap.add_argument("--mqtt-port", type=int, default=8883)
+    ap.add_argument("--mqtt-ca", default="ca.crt")
+    ap.add_argument("--mqtt-topic", default="factory/vision/detection")
     a = ap.parse_args()
     cfg.update(model=a.model, camera=a.camera, imgsz=a.imgsz)
+    DET_PERIOD = 1 / a.det_fps if a.det_fps > 0 else 0
+    if a.map50 is not None:
+        MODEL_MAP50 = a.map50
+        state["map50"] = a.map50
+    publisher = DetectionPublisher(a.mqtt_host, a.mqtt_port, a.mqtt_ca, a.mqtt_topic)
     db_init()
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=streamer, daemon=True).start()
