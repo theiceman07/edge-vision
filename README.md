@@ -41,6 +41,8 @@ GPIO17 green = nut only, GPIO27 red = bolt only, GPIO22 blue = both (priority); 
 - `bench_inference.py`: latency/FPS of an ONNX model on the machine it runs on (writes JSON).
 - `realtime_fps_test.py`: paced run at a locked FPS (default 15): skipped frames, latency, precision/recall. Run it on the Pi for 10 minutes and note the temperature before/after.
 - `eval_detections.py`: accuracy from a CSV of truth vs predicted.
+- `passfail_eval.py`: confusion matrix and false-pass rate for the 20-part station test from `part_id,truth,decision` rows.
+- Tests: `python -m pytest -q tests` (LED debounce logic, MQTT publisher, pass/fail maths; no hardware needed).
 
 ## Training (`training/`, `docs/COLAB_TRAINING.md`)
 Colab notebook, results, confusion matrices, `errors_analysis.py` (wrong detections, 10 written up in `training/errors/WRONG_DETECTIONS.md`),

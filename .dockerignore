@@ -1,0 +1,10 @@
+.git
+training
+docs
+tests
+tools
+*.md
+app/best.pt
+app/best_int8_cal50.tflite
+app/history.db
+__pycache__
