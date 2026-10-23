@@ -21,6 +21,6 @@ Prepare 10 good trays and 10 defective trays, for example 2 each of: missing bol
 False pass is the dangerous error in inspection (a defect escapes), so it is the number to explain; false fails only cost a re-check.
 
 ## Limits
-- Counting depends on the detector: overlapping parts, thin bolts and objects far from the camera are its known weak spots (`docs/MODEL_VALIDATION.md`). Expect false fails on crowded trays.
+- Counting depends on the detector: overlapping parts, thin bolts and objects far from the camera are its known weak spots. Expect false fails on crowded trays.
 - Tested on a PC with a fake camera looping dataset images (decision logic, buttons, CSV, metrics): not yet on a real tray with the Pi camera.
 - The model has not been validated on your trays; the 20-tray result is your measurement of that.
