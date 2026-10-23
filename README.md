@@ -21,7 +21,7 @@ USB camera -> YOLO11n (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live w
 
 ## Install and run
 ```bash
-pip install ultralytics onnxruntime opencv-python flask fpdf2 gpiozero lgpio paho-mqtt   # CPU-only torch on the Pi
+pip install ultralytics onnx onnxruntime opencv-python flask fpdf2 gpiozero lgpio paho-mqtt   # CPU-only torch on the Pi
 cd app && python server.py --model best.onnx --map50 0.972     # http://<pi-ip>:5000
 ```
 Options: `--camera N`, `--imgsz 320`, `--det-fps 15` (detection cap, default 15, `0` = unlimited), `--map50 <your measured value>`
@@ -51,7 +51,7 @@ Colab notebook, results, confusion matrices, `errors_analysis.py` (wrong detecti
 (`app/focus.txt` is a fixed manual focus; recalibrate after moving the camera).
 
 ## Docs
-`docs/DATA_CARD.md`, `docs/MODEL_VALIDATION.md`, `docs/M3_decision_rule_sheet.md`, `docs/ARCHITECTURE.md`, `docs/COLAB_TRAINING.md`.
+`docs/SYSTEM_ARCHITECTURE.md`, `docs/MODEL_DATASHEET.md`, `docs/M2_target.md` + `docs/M2_results.md`, `docs/DATA_CARD.md`, `docs/MODEL_VALIDATION.md`, `docs/M3_decision_rule_sheet.md`, `docs/ARCHITECTURE.md`, `docs/COLAB_TRAINING.md`.
 
 ## Rules for results in this repo
 Only commit numbers you measured yourself, with the machine named. Datasets and photos are not stored here.
