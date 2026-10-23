@@ -1,10 +1,10 @@
-> **Origin:** starts from https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6), plus shared infrastructure added on this `shared-base` branch (no model weights, no personal results).
+> **Origin:** starts from https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6), plus shared infrastructure on `main` (no model weights, no personal results).
 
 # Edge Vision: bolt/nut detection on Raspberry Pi 5
 
 USB camera -> YOLO (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live dashboard, optional MQTT, PASS/FAIL station, session history and reports.
 
-**This branch is a neutral starting point.** It contains shared code and templates only. Train your own model, measure on your own device and commit your results on your own branch (`docs/BRANCHING.md`).
+**`main` is a neutral starting point.** It contains shared code and templates only. Train your own model, measure on your own device and commit your results on your own branch (`docs/BRANCHING.md`).
 
 ## Start
 ```bash
