@@ -37,6 +37,9 @@ th{color:var(--mut);font-weight:500;text-align:left;padding:4px 6px}td{padding:6
 .ev{font-size:13px;padding:5px 0;border-top:1px solid var(--line);display:flex;gap:8px}.ev:first-child{border:0}
 .ev time{color:var(--mut);white-space:nowrap}.k-warn{color:var(--warn)}.k-start{color:var(--ok)}.k-stop{color:var(--bad)}
 #err{color:var(--bad);font-size:13px;margin-top:8px;min-height:1em}
+.verdict{font-size:46px;font-weight:800;text-align:center;border-radius:10px;padding:14px 8px;letter-spacing:.04em}
+.verdict.PASS{background:#123d27;color:var(--ok)}.verdict.FAIL{background:#4a1818;color:var(--bad)}.verdict.WAIT,.verdict.OFF{background:var(--bg);color:var(--mut);font-size:20px}
+#vreason{margin:8px 0;color:var(--mut);font-size:13px;text-align:center;min-height:18px}
 </style></head><body>
 <header><h1>Nuts &amp; Bolts · Live Inspection</h1>
  <div class="ctl"><span><span class="dot" id="dot"></span><span id="status">connecting…</span></span></div></header>
@@ -50,6 +53,14 @@ th{color:var(--mut);font-weight:500;text-align:left;padding:4px 6px}td{padding:6
    <div class="scroll"><table><thead><tr><th>#</th><th>Started</th><th>Duration</th><th>FPS</th><th>Latency</th><th>Conf</th><th>Peak</th><th></th></tr></thead><tbody id="sess"></tbody></table></div></div>
  </div>
  <div class="col">
+  <div class="card"><h2><span>Station · PASS / FAIL</span><a class="btn" href="/inspect.csv">log CSV</a></h2>
+   <div id="verdict" class="verdict OFF">STATION NOT CONFIGURED</div><div id="vreason"></div>
+   <div style="display:flex;gap:8px"><button id="b_good" class="go">Tray is GOOD</button><button id="b_def" class="stop">Tray is DEFECTIVE</button><button id="b_undo">Undo</button></div>
+   <div class="grid4" style="margin-top:10px">
+    <div class="m"><span>Correct results (headline)</span><b id="hl">–</b></div>
+    <div class="m"><span>False-pass rate</span><b id="fpr">–</b><small id="fpn"></small></div>
+    <div class="m"><span>False fails</span><b id="ffl">–</b></div>
+    <div class="m"><span>Trays tested</span><b id="tst">–</b></div></div></div>
   <div class="card"><h2>Object count</h2><div class="kpis">
    <div class="kpi" style="--c:var(--bolt)"><b id="c_bolt">0</b><span>bolts</span></div>
    <div class="kpi" style="--c:var(--nut)"><b id="c_nut">0</b><span>nuts</span></div>
@@ -58,7 +69,7 @@ th{color:var(--mut);font-weight:500;text-align:left;padding:4px 6px}td{padding:6
    <button id="reset" style="padding:3px 8px;font-size:12px;margin-left:6px">reset</button></div></div>
   <div class="card"><h2>Accuracy</h2><div class="grid4">
    <div class="m"><span>Live mean confidence</span><b id="conf">–</b><div class="bar"><i id="confbar"></i></div></div>
-   <div class="m"><span>Model mAP50 (own camera)</span><b id="map">–</b><small>from training run</small></div></div></div>
+   <div class="m"><span>Model mAP50 (test set)</span><b id="map">–</b><small>from training run</small></div></div></div>
   <div class="card"><h2>Performance</h2><div class="grid4">
    <div class="m"><span>Video FPS (locked 15)</span><b id="vfps">0</b></div>
    <div class="m"><span>Detection FPS</span><b id="fps">0</b></div>
@@ -95,6 +106,11 @@ function render(s){last=Date.now();running=s.running;sid=s.session;
  $('fps').textContent=s.fps;$('vfps').textContent=s.video_fps;$('lat').textContent=s.latency_ms;$('up').textContent=fmtDur(s.uptime);$('frames').textContent=s.frames;
  $('rep').href='/report?session='+(s.session||0);
  $('log').innerHTML=s.recent.map(e=>`<div class="ev"><time>${hm(e.ts)}</time><span class="k-${e.kind}">${e.msg}</span></div>`).join('')||'<div class="ev">no events yet</div>';
+ const v=s.verdict||'OFF';$('verdict').className='verdict '+v;$('verdict').textContent=v==='OFF'?'STATION NOT CONFIGURED':v;
+ $('vreason').textContent=v==='OFF'?'start the server with --expect bolt=2,nut=2':(s.reason||'')+' · expected '+Object.entries(s.expect||{}).map(([k,n])=>n+' '+k).join(' + ');
+ $('b_good').disabled=$('b_def').disabled=!(v==='PASS'||v==='FAIL');$('b_undo').disabled=v==='OFF';
+ const m=s.station;if(m){$('hl').textContent=m.correct+' / '+m.tested;$('fpr').textContent=m.defective?Math.round(m.false_pass_rate*100)+'%':'–';
+  $('fpn').textContent=' '+m.false_pass+' of '+m.defective+' defective';$('ffl').textContent=m.false_fail+' of '+m.good;$('tst').textContent=m.tested}
  lines('ch_count',s.series,Object.keys(C).map(k=>({n:k,c:C[k],f:p=>p.counts[k]})));
  lines('ch_perf',s.series,[{n:'FPS',c:'#3ddc84',f:p=>p.fps},{n:'latency ms',c:'#ff7a59',f:p=>p.latency/100}]);
  if(Date.now()-lastSess>5000)loadSess()}
@@ -111,4 +127,6 @@ function setFeed(on){const v=$('vid');if(on&&!v.getAttribute('src')){v.src='/vid
 $('start').onclick=()=>post({action:'start'});$('stopb').onclick=()=>post({action:'stop'});
 $('th').oninput=e=>{$('tv').textContent=e.target.value+'%';post({conf:e.target.value/100})};
 $('reset').onclick=()=>post({reset:true});
+const insp=b=>fetch('/api/inspect',{method:'POST',body:JSON.stringify(b)}).then(r=>r.json()).then(j=>{if(j.error)alert(j.error)});
+$('b_good').onclick=()=>insp({truth:'good'});$('b_def').onclick=()=>insp({truth:'defective'});$('b_undo').onclick=()=>insp({undo:true});
 </script></body></html>

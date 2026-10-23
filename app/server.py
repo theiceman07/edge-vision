@@ -9,10 +9,12 @@ from datetime import datetime
 import cv2
 import numpy as np
 from leds import Leds
+from mqtt_pub import DetectionPublisher
+import inspect_logic as il
 from flask import Flask, Response, jsonify, render_template, request
 
 COLORS = {"bolt": (255, 120, 40), "nut": (0, 180, 255), "screw": (80, 230, 90)}  # BGR
-MODEL_MAP50 = 0.798        # mAP50 on held-out own-camera photos (yolo11n @320)
+MODEL_MAP50 = float(os.environ.get("MODEL_MAP50", 0))   # set to YOUR measured mAP50 (env MODEL_MAP50 or --map50); 0 = not set
 DB = "history.db"
 
 app = Flask(__name__)
@@ -22,9 +24,13 @@ state = {
     "running": False, "session": None, "counts": {}, "total": 0, "fps": 0.0,
     "latency_ms": 0.0, "video_fps": 0.0, "led": "off", "avg_conf": 0.0, "conf": 0.5, "peak": {}, "frames": 0,
     "started": None, "error": "", "camera_name": "", "map50": MODEL_MAP50,
-    "classes": [], "recent": [],
+    "classes": [], "recent": [], "verdict": "OFF", "reason": "", "expect": {},
 }
 leds = Leds()          # green=nut, red=bolt, blue=both (GPIO 17/27/22)
+publisher = DetectionPublisher()   # replaced in __main__ if --mqtt-host is given
+EXPECT = {}                        # PASS/FAIL station: expected kit, e.g. {'bolt': 2, 'nut': 2}; set with --expect
+stab = il.Stabilizer(5)
+station = il.StationLog()      # CSV-backed in __main__ when --expect is given
 latest = {"jpeg": None, "cam": None, "boxes": [], "names": {}}
 want_run = threading.Event()
 
@@ -154,7 +160,11 @@ def worker():
         log_event("start", "Detection started")
         fps, last_ts, last_db, last_counts, last_change, last_warn = 0.0, 0, 0, None, 0, 0
         confs, lats = [], []
+        det_next, last_t0 = 0.0, 0.0
+        stab.reset()
         while want_run.is_set():
+            if DET_PERIOD and det_next > time.time():
+                time.sleep(det_next - time.time())   # cap detection rate, read a fresh frame afterwards
             frame, fts = cam.read()
             if frame is None or fts == last_ts:
                 if time.time() - max(last_ts, state["started"]) > 3:
@@ -177,6 +187,8 @@ def worker():
                 continue
             last_ts = fts
             t0 = time.time()
+            # fixed deadline grid so sleep/read overshoot doesn't accumulate; resync if we fall a full period behind
+            det_next = det_next + DET_PERIOD if det_next and t0 - det_next < DET_PERIOD else t0 + DET_PERIOD
             r = model.predict(frame, imgsz=cfg["imgsz"], conf=state["conf"], iou=0.45,
                               agnostic_nms=True, verbose=False)[0]
             lat = (time.time() - t0) * 1000
@@ -187,8 +199,14 @@ def worker():
             latest["boxes"] = boxes
             leds.update(counts.get("nut", 0), counts.get("bolt", 0))
             state["led"] = leds.state
+            publisher.publish(counts, len(boxes), leds.state, round(lat, 1), round(fps, 1))
+            if EXPECT:
+                verdict, why = stab.update(*il.decide(counts, EXPECT))
+                with lock:
+                    state.update(verdict=verdict, reason=why)
             now = time.time()
-            inst = 1 / max(now - t0, 1e-3)
+            inst = 1 / max(t0 - last_t0, 1e-3) if last_t0 else 1 / max(now - t0, 1e-3)   # loop rate, includes the cap
+            last_t0 = t0
             fps = 0.8 * fps + 0.2 * inst if fps else inst
             conf = float(np.mean([b[4] for b in boxes])) if boxes else 0.0
             with lock:
@@ -217,6 +235,8 @@ def worker():
         with lock:
             state.update(running=False, fps=0.0, latency_ms=0.0, total=0, avg_conf=0.0,
                          counts={n: 0 for n in sorted(set(names.values()))})
+            if EXPECT:
+                state.update(verdict="WAIT", reason="detection stopped")
         log_event("stop", "Detection stopped")
         latest["jpeg"] = placeholder("Stopped - press Start")
 
@@ -230,6 +250,7 @@ def snapshot():
                     "ORDER BY ts DESC LIMIT 90", (s["session"],))[::-1] if s["session"] else []
     for p in s["series"]:
         p["counts"] = json.loads(p["counts"])
+    s["station"] = station.metrics() if EXPECT else None
     return s
 
 
@@ -239,6 +260,7 @@ def index():
 
 
 VIDEO_FPS = 15
+DET_PERIOD = 1 / 15       # detection cap (seconds per frame); 0 = unlimited. Set with --det-fps
 
 
 def streamer():
@@ -307,6 +329,29 @@ def control():
     if d.get("reset"):
         state["peak"] = {}
     return jsonify(ok=True)
+
+
+@app.route("/api/inspect", methods=["POST"])
+def inspect_part():
+    """Operator marks the tray in view as good/defective; the station's current stable decision is logged next to it."""
+    if not EXPECT:
+        return jsonify(error="station not configured: start the server with --expect bolt=2,nut=2"), 400
+    d = request.get_json(force=True)
+    if d.get("undo"):
+        return jsonify(removed=station.undo(), metrics=station.metrics())
+    with lock:
+        verdict, reason, counts = state["verdict"], state["reason"], dict(state["counts"])
+    try:
+        row = station.record(d.get("truth", ""), verdict, reason, counts)
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    log_event("station", f"Part {row['part_id']}: truth {row['truth']}, decision {row['decision']}")
+    return jsonify(row=row, metrics=station.metrics())
+
+
+@app.route("/inspect.csv")
+def inspect_csv():
+    return Response(station.csv_text(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=station_log.csv"})
 
 
 @app.route("/api/sessions")
@@ -385,8 +430,27 @@ if __name__ == "__main__":
     ap.add_argument("--imgsz", type=int, default=320)
     ap.add_argument("--port", type=int, default=5000)
     ap.add_argument("--no-autostart", action="store_true")
+    ap.add_argument("--det-fps", type=float, default=15.0, help="cap detection FPS (0 = unlimited)")
+    ap.add_argument("--expect", default=None, help="PASS/FAIL station: expected kit, e.g. bolt=2,nut=2")
+    ap.add_argument("--station-log", default="station_log.csv")
+    ap.add_argument("--station-confirm", type=int, default=5, help="frames a verdict must hold before it changes")
+    ap.add_argument("--map50", type=float, default=None, help="your measured mAP50 (0-1)")
+    ap.add_argument("--mqtt-host", default=None)
+    ap.add_argument("--mqtt-port", type=int, default=8883)
+    ap.add_argument("--mqtt-ca", default="ca.crt")
+    ap.add_argument("--mqtt-topic", default="factory/vision/detection")
     a = ap.parse_args()
     cfg.update(model=a.model, camera=a.camera, imgsz=a.imgsz)
+    DET_PERIOD = 1 / a.det_fps if a.det_fps > 0 else 0
+    if a.expect:
+        EXPECT = il.parse_expect(a.expect)
+        state.update(expect=EXPECT, verdict="WAIT", reason="waiting for stable detection")
+        stab = il.Stabilizer(a.station_confirm)
+        station = il.StationLog(a.station_log)
+    if a.map50 is not None:
+        MODEL_MAP50 = a.map50
+        state["map50"] = a.map50
+    publisher = DetectionPublisher(a.mqtt_host, a.mqtt_port, a.mqtt_ca, a.mqtt_topic)
     db_init()
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=streamer, daemon=True).start()

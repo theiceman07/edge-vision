@@ -1,30 +1,26 @@
-> **Origin:** this repo starts from code in https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6). Model weights from that repo are NOT included. All measurements, datasets and results added here are produced by me on my own device; see the commit history.
+> **Origin:** starts from https://github.com/theiceman07/cv-edge-computing (initial commit cc367b6), plus shared infrastructure added on this `shared-base` branch (no model weights, no personal results).
 
-# Nuts & Bolts detection on Raspberry Pi 5 (edge CV)
+# Edge Vision: bolt/nut detection on Raspberry Pi 5
 
-Real-time nut/bolt detection from a USB webcam with a live web dashboard, status LEDs, session history and PDF/CSV reports.
+USB camera -> YOLO (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live dashboard, optional MQTT, PASS/FAIL station, session history and reports.
 
-- **Model:** YOLO11n, 2 classes (`bolt`, `nut`), input 320 px, exported to ONNX. Own-camera validation mAP50 = 0.80 (bolt 0.77, nut 0.83); about 55 ms/frame on a Pi 5 CPU.
-- **Video:** locked 15 FPS stream, detection runs separately.
-- **LEDs (BCM):** GPIO17 green = nut only, GPIO27 red = bolt only, GPIO22 blue = both (priority). Each LED: GPIO -> 330 ohm -> LED(+), LED(-) -> GND.
+**This branch is a neutral starting point.** It contains shared code and templates only. Train your own model, measure on your own device and commit your results on your own branch (`docs/BRANCHING.md`).
 
-## Run
+## Start
 ```bash
-# old dashboard (OpenCV capture + onnxruntime, drives the LEDs, PDF/CSV reports) - from repo root
-python dashboard.py            # http://<pi-ip>:5000
-
-# newer server (separate video/detection threads, sessions, events, HTML report) - from app/
-cd app && python server.py     # http://<pi-ip>:5000  (same port: run only one at a time)
+pip install ultralytics onnx onnxruntime opencv-python flask fpdf2 gpiozero lgpio paho-mqtt     # CPU-only torch on the Pi
+cd app && python server.py --model best.onnx --map50 <YOUR measured mAP50>                   # http://<pi-ip>:5000
 ```
-Install: `pip install ultralytics onnxruntime opencv-python flask fpdf2 gpiozero lgpio` (use CPU-only torch on the Pi).
+Options: `--camera N`, `--imgsz 320`, `--det-fps 15` (detection cap, `0` = unlimited), `--map50` (shows 0 until set),
+`--expect bolt=2,nut=2` (PASS/FAIL station, see `docs/STATION.md`), `--mqtt-host --mqtt-ca ...` (env `MQTT_USER`/`MQTT_PASSWORD`).
+The video stream is locked at 15 FPS. You must supply `app/best.onnx` (train with `docs/COLAB_TRAINING.md`).
 
-## Camera focus
-`app/focus.txt` holds a fixed manual focus value (autofocus hunts on a plain table). It depends on camera height - re-run `python calibrate_focus.py` (from `app/`) after moving the camera.
+## What is here
+- `app/` server, LEDs (GPIO17 green nut / 27 red bolt / 22 blue both), MQTT publisher, station logic, data-collection and labelling tools.
+- `tools/` `bench_inference.py`, `realtime_fps_test.py` (paced 15 FPS run), `pi_measure.sh` (one-command Pi evidence), `fake_camera_demo.py` (run the server on a PC), `passfail_eval.py`, `eval_detections.py`.
+- `training/` Colab notebooks and analysis scripts (`errors_analysis.py`, `robustness.py`); results are NOT included.
+- `docs/` templates and guides: `DATA_CARD.md`, `M3_decision_rule_sheet.md`, `STATION.md`, `SYSTEM_ARCHITECTURE.md`, `COLAB_TRAINING.md`, `BRANCHING.md`.
+- `Dockerfile`, `docker-compose.yml`, `deploy/vision.service` (untested on a Pi).
+- Tests: `python -m pytest -q tests` (LED debounce logic, MQTT publisher, station logic, pass/fail maths).
 
-## Training pipeline (`app/`)
-1. `capture_data.py` - collect photos from your own camera (`n` nuts, `b` bolts, `e` empty/negatives).
-2. `autolabel.py` - FastSAM proposals -> YOLO labels; `review.py` - quick browser tool to fix them by hand.
-3. `build_final.py` - merge own-camera photos with other data into `ds3/`.
-4. `train_colab_v3.ipynb` - train YOLO11n @320 on a Colab T4, export `best.onnx`.
-
-Datasets and photos are not included in this repo.
+Only commit numbers you measured yourself, naming the machine.
