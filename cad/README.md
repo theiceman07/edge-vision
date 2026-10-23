@@ -1,6 +1,6 @@
 # CAD: feeder bracket (stand-in for the IDRP part; confirm with the coach)
 Built in Fusion from the prompts in `../docs/CAD_PROMPTS.md`. Files: `feeder_bracket_model1_good.*` (Model 1, good) and `feeder_bracket_model2_defective.*` (Model 2, defective variant): STEP (exported from Fusion), STL (generated from the STEP with cadquery, for printing), top and isometric PNG renders (generated from the STEP mesh; the shading triangles are a rendering artefact, not geometry).
-The Fusion F3D files are not in this folder yet: add your own exports here.
+The Fusion F3D files (native, from the same designs) are included; they are valid Fusion archives, but only the STEP files were checked geometrically below.
 
 ## Checked from the STEP files (cadquery, mm)
 | Check | Model 1 (good) | Model 2 (defective) | Design value |
