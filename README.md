@@ -20,6 +20,7 @@ The video stream is locked at 15 FPS. You must supply `app/best.onnx` (train wit
 - `tools/` `bench_inference.py`, `realtime_fps_test.py` (paced 15 FPS run), `pi_measure.sh` (one-command Pi evidence), `fake_camera_demo.py` (run the server on a PC), `passfail_eval.py`, `eval_detections.py`.
 - `training/` Colab notebooks and analysis scripts (`errors_analysis.py`, `robustness.py`); results are NOT included.
 - `docs/` templates and guides: `DATA_CARD.md`, `M3_decision_rule_sheet.md`, `STATION.md`, `SYSTEM_ARCHITECTURE.md`, `COLAB_TRAINING.md`, `BRANCHING.md`.
+- `cad/` feeder bracket Model 1 (good) and Model 2 (defective variant): STEP/STL, renders and a verification table (`cad/README.md`); prompts in `docs/CAD_PROMPTS.md`. Stand-in for the IDRP part until your coach confirms.
 - `Dockerfile`, `docker-compose.yml`, `deploy/vision.service` (untested on a Pi).
 - Tests: `python -m pytest -q tests` (LED debounce logic, MQTT publisher, station logic, pass/fail maths).
 
