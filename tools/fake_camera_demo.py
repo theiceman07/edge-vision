@@ -52,6 +52,8 @@ def main():
     ap.add_argument("--conf", type=float, default=0.4)
     ap.add_argument("--det-fps", type=float, default=15.0)
     ap.add_argument("--map50", type=float, default=0.0)
+    ap.add_argument("--expect", default=None, help="PASS/FAIL station kit, e.g. bolt=2,nut=2")
+    ap.add_argument("--station-log", default="station_log.csv")
     a = ap.parse_args()
     files = sorted(glob.glob(os.path.join(a.images, "*.jpg")))[:30]
     if not files:
@@ -61,6 +63,11 @@ def main():
     server.state["conf"] = a.conf
     server.state["map50"] = server.MODEL_MAP50 = a.map50
     server.DET_PERIOD = 1 / a.det_fps if a.det_fps > 0 else 0
+    if a.expect:
+        server.EXPECT = server.il.parse_expect(a.expect)
+        server.state.update(expect=server.EXPECT, verdict="WAIT", reason="waiting for stable detection")
+        server.stab = server.il.Stabilizer(5)
+        server.station = server.il.StationLog(a.station_log)
     server.db_init()
     threading.Thread(target=server.worker, daemon=True).start()
     threading.Thread(target=server.streamer, daemon=True).start()

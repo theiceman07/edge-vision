@@ -26,7 +26,8 @@ cd app && python server.py --model best.onnx --map50 0.972     # http://<pi-ip>:
 ```
 Options: `--camera N`, `--imgsz 320`, `--det-fps 15` (detection cap, default 15, `0` = unlimited), `--map50 <your measured value>`
 (shows 0 until set), `--no-autostart`, `--mqtt-host --mqtt-port 8883 --mqtt-ca ca.crt --mqtt-topic factory/vision/detection`
-(set `MQTT_USER` / `MQTT_PASSWORD` in the environment). The video stream is locked at 15 FPS (`VIDEO_FPS`).
+(set `MQTT_USER` / `MQTT_PASSWORD` in the environment).
+PASS/FAIL station: `--expect bolt=2,nut=2` adds a PASS/FAIL badge, tray-good/defective buttons, a CSV log and live metrics (headline: correct results out of N, plus false-pass rate); see `docs/STATION.md`. The video stream is locked at 15 FPS (`VIDEO_FPS`).
 `dashboard.py` in the repo root is the older single-file dashboard; use `app/server.py`.
 
 ## LEDs (BCM)
@@ -52,7 +53,7 @@ Colab notebook, results, confusion matrices, `errors_analysis.py` (wrong detecti
 (`app/focus.txt` is a fixed manual focus; recalibrate after moving the camera).
 
 ## Docs
-`docs/SYSTEM_ARCHITECTURE.md`, `docs/MODEL_DATASHEET.md`, `docs/M2_target.md` + `docs/M2_results.md`, `docs/DATA_CARD.md`, `docs/MODEL_VALIDATION.md`, `docs/M3_decision_rule_sheet.md`, `docs/ARCHITECTURE.md`, `docs/COLAB_TRAINING.md`.
+`docs/STATION.md`, `docs/SYSTEM_ARCHITECTURE.md`, `docs/MODEL_DATASHEET.md`, `docs/M2_target.md` + `docs/M2_results.md`, `docs/DATA_CARD.md`, `docs/MODEL_VALIDATION.md`, `docs/M3_decision_rule_sheet.md`, `docs/ARCHITECTURE.md`, `docs/COLAB_TRAINING.md`.
 
 ## Rules for results in this repo
 Only commit numbers you measured yourself, with the machine named. Datasets and photos are not stored here.
