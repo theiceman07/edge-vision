@@ -15,7 +15,7 @@ USB camera -> YOLO11n (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live w
 ## Model
 - YOLO11n, 2 classes (`bolt`, `nut`), input 320, trained on *Bolts and Nuts v8* by Kim (CC BY 4.0). See `docs/DATA_CARD.md`.
 - Test set (PyTorch, Colab): precision 0.923, recall 0.960, mAP50 0.972, mAP50-95 0.589. Validation: mAP50 0.959.
-- Weights: `app/best.pt`, `app/best.onnx` (5.5 MB each). Full numbers: `training/results/RESULTS.md`, `docs/MODEL_VALIDATION.md`.
+- Weights: `app/best.pt` (5.5 MB), `app/best.onnx` (10.5 MB). Full numbers: `training/results/RESULTS.md`, `docs/MODEL_VALIDATION.md`.
 - Recommended confidence ~0.4 (best F1 on the test set: 0.35-0.45). Weak spots: heavy JPEG compression, objects far smaller than in training (keep camera height fixed), overlapping or very thin bolts.
 - Not validated: Pi speed, your camera/lighting, your own part.
 
