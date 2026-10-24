@@ -6,6 +6,8 @@ USB camera -> YOLO (ONNX, 320 px) -> decision + debounce -> GPIO LEDs, live dash
 
 **This branch is a neutral starting point.** It contains shared code and templates only. Train your own model, measure on your own device and commit your results on your own branch (`docs/BRANCHING.md`).
 
+**On a Raspberry Pi: follow `docs/PI_QUICKSTART.md`.**
+
 ## Start
 ```bash
 pip install ultralytics onnx onnxruntime opencv-python flask fpdf2 gpiozero lgpio paho-mqtt     # CPU-only torch on the Pi
