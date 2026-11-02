@@ -22,12 +22,13 @@ lock = threading.Lock()
 cfg = {"model": "best.onnx", "camera": 0, "imgsz": 320}
 state = {
     "running": False, "session": None, "counts": {}, "total": 0, "fps": 0.0,
-    "latency_ms": 0.0, "video_fps": 0.0, "led": "off", "avg_conf": 0.0, "conf": 0.5, "peak": {}, "frames": 0,
+    "latency_ms": 0.0, "video_fps": 0.0, "led": "off", "avg_conf": 0.0, "conf": 0.4, "peak": {}, "frames": 0,
     "started": None, "error": "", "camera_name": "", "map50": MODEL_MAP50,
     "classes": [], "recent": [], "verdict": "OFF", "reason": "", "expect": {},
 }
 leds = Leds()          # green=nut, red=bolt, blue=both (GPIO 17/27/22)
 publisher = DetectionPublisher()   # replaced in __main__ if --mqtt-host is given
+STATION_CONF = 0.5                 # PASS/FAIL counts only boxes at least this confident (display uses the slider)
 EXPECT = {}                        # PASS/FAIL station: expected kit, e.g. {'bolt': 2, 'nut': 2}; set with --expect
 stab = il.Stabilizer(5)
 station = il.StationLog()      # CSV-backed in __main__ when --expect is given
@@ -120,13 +121,16 @@ def placeholder(text):
 
 
 def draw(frame, boxes, names):
-    for x1, y1, x2, y2, c, cid in boxes:
+    H, W = frame.shape[:2]
+    for x1, y1, x2, y2, c, cid in sorted(boxes, key=lambda b: b[4]):   # most confident drawn last (on top)
         col = COLORS.get(names[cid], (200, 200, 200))
         cv2.rectangle(frame, (x1, y1), (x2, y2), col, 2)
         t = f"{names[cid]} {c:.0%}"
         (tw, th), _ = cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 6, y1), col, -1)
-        cv2.putText(frame, t, (x1 + 3, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        lx = min(max(x1, 0), W - tw - 6)
+        ly = y1 if y1 - th - 6 >= 0 else y1 + th + 6          # label above the box, or inside it at the frame edge
+        cv2.rectangle(frame, (lx, ly - th - 6), (lx + tw + 6, ly), col, -1)
+        cv2.putText(frame, t, (lx + 3, ly - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
 
 
 # ───────────────────────── worker ─────────────────────────
@@ -201,7 +205,11 @@ def worker():
             state["led"] = leds.state
             publisher.publish(counts, len(boxes), leds.state, round(lat, 1), round(fps, 1))
             if EXPECT:
-                verdict, why = stab.update(*il.decide(counts, EXPECT))
+                sc = {n: 0 for n in counts}
+                for *_, c_, cid in boxes:
+                    if c_ >= max(state["conf"], STATION_CONF):
+                        sc[names[cid]] += 1
+                verdict, why = stab.update(*il.decide(sc, EXPECT))
                 with lock:
                     state.update(verdict=verdict, reason=why)
             now = time.time()
@@ -432,6 +440,8 @@ if __name__ == "__main__":
     ap.add_argument("--no-autostart", action="store_true")
     ap.add_argument("--det-fps", type=float, default=15.0, help="cap detection FPS (0 = unlimited)")
     ap.add_argument("--expect", default=None, help="PASS/FAIL station: expected kit, e.g. bolt=2,nut=2")
+    ap.add_argument("--conf", type=float, default=0.4, help="detection confidence threshold (0.35-0.45 had the best F1, see docs/MODEL_VALIDATION.md)")
+    ap.add_argument("--station-conf", type=float, default=0.5, help="PASS/FAIL station counts only detections at least this confident")
     ap.add_argument("--station-log", default="station_log.csv")
     ap.add_argument("--station-confirm", type=int, default=5, help="frames a verdict must hold before it changes")
     ap.add_argument("--map50", type=float, default=None, help="your measured mAP50 (0-1)")
@@ -442,6 +452,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     cfg.update(model=a.model, camera=a.camera, imgsz=a.imgsz)
     DET_PERIOD = 1 / a.det_fps if a.det_fps > 0 else 0
+    state["conf"], STATION_CONF = min(max(a.conf, 0.05), 0.95), a.station_conf
     if a.expect:
         EXPECT = il.parse_expect(a.expect)
         state.update(expect=EXPECT, verdict="WAIT", reason="waiting for stable detection")

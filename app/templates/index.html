@@ -95,7 +95,7 @@ function lines(id,series,keys){const cv=$(id),r=devicePixelRatio||1,w=cv.clientW
  keys.forEach(k=>{g.strokeStyle=k.c;g.lineWidth=2;g.beginPath();
   series.forEach((p,i)=>{const x=34+(w-34)*i/(series.length-1),y=8+(ht-24)*(1-(k.f(p)||0)/mx);i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke()});
  let lx=34;keys.forEach(k=>{g.fillStyle=k.c;g.fillRect(lx,ht-9,10,3);g.fillStyle='#8b94a3';g.fillText(k.n,lx+14,ht-4);lx+=14+g.measureText(k.n).width+14})}
-function render(s){last=Date.now();running=s.running;sid=s.session;
+function render(s){last=Date.now();if(document.activeElement!==$('th')){$('th').value=Math.round(s.conf*100);$('tv').textContent=Math.round(s.conf*100)+'%';}running=s.running;sid=s.session;
  $('dot').classList.toggle('on',s.running);$('status').textContent=s.running?'live':'stopped';
  $('start').disabled=s.running;$('stopb').disabled=!s.running;setFeed(s.running);
  $('camname').textContent=s.camera_name;$('err').textContent=s.error;
