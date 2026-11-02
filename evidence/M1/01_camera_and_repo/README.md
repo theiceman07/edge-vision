@@ -7,7 +7,8 @@
 **Notes:** first_frame.jpg committed (a1c498c) with system info. Still to add: a one-page spec sheet (Pi model, camera, OS, versions).
 
 ## Evidence files in this folder
-- first_frame.jpg
-- system_info_pi.txt
+- frame.jpg
+- spec_sheet.md
+- system_info_raw.txt
 
 Rules: only numbers measured by me on my own hardware; commit on branch `arjun` with the milestone in the message.

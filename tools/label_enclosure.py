@@ -42,6 +42,29 @@ def find_boxes(img):
     return out
 
 
+def dhash(img):
+    g = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), (9, 8), interpolation=cv2.INTER_AREA)
+    return int("".join("1" if v else "0" for v in (g[:, 1:] > g[:, :-1]).flatten()), 2)
+
+
+def groups(lst, near=6):
+    """Union photos whose 64-bit dHash is within `near` bits: a group = one 'look', kept together in ONE split (no leakage)."""
+    hs = [dhash(cv2.imread(f)) for f, _, _ in lst]
+    par = list(range(len(lst)))
+    def find(i):
+        while par[i] != i:
+            par[i] = par[par[i]]; i = par[i]
+        return i
+    for i in range(len(lst)):
+        for j in range(i):
+            if bin(hs[i] ^ hs[j]).count("1") <= near:
+                par[find(i)] = find(j)
+    g = {}
+    for i in range(len(lst)):
+        g.setdefault(find(i), []).append(i)
+    return list(g.values())
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default="app/mydata_enc")
@@ -61,10 +84,19 @@ def main():
             items[c].append((f, blk, bx))
     shutil.rmtree(a.out, ignore_errors=True)
     for c, lst in items.items():
-        random.shuffle(lst)
-        n = len(lst); ntr, nva = round(0.7 * n), round(0.2 * n)
+        n = len(lst)
+        if c == "empty":                                   # empty mat: all alike by design, random split
+            random.shuffle(lst); grp = [[i] for i in range(n)]
+        else:
+            grp = groups(lst); random.shuffle(grp); grp.sort(key=lambda g: -len(g))
+        sp_of, cnt, tgt = {}, {"train": 0, "val": 0, "test": 0}, {"train": 0.7, "val": 0.2, "test": 0.1}
+        for g in grp:                                      # each group goes to the split furthest below its 70/20/10 share
+            sp = max(tgt, key=lambda s_: tgt[s_] * n - cnt[s_])
+            for i in g:
+                sp_of[i] = sp
+            cnt[sp] += len(g)
         for k, (f, blk, bx) in enumerate(lst):
-            sp = "train" if k < ntr else "val" if k < ntr + nva else "test"
+            sp = sp_of[k]
             os.makedirs(f"{a.out}/{sp}/images", exist_ok=True); os.makedirs(f"{a.out}/{sp}/labels", exist_ok=True)
             base = os.path.splitext(os.path.basename(f))[0]
             shutil.copy(f, f"{a.out}/{sp}/images/{base}.jpg")
