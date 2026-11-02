@@ -51,3 +51,8 @@ Total points on the checklist: 100.
 - Raw output of `tools/pi_measure.sh` is in `evidence/pi_<timestamp>/`; copies are inside the item folders.
 - The enclosure is the new IDRP part; nuts-and-bolts results are kept as the earlier baseline and are labelled as such.
 - Videos (mp4) must be recorded with a phone or screen recorder; they are not created by the scripts.
+
+## Status at end of 2026-11-02
+- Committed on branch `arjun` but NOT yet pushed (no GitHub credentials on the Pi; run `git push origin arjun` and enter a token).
+- Detector for the enclosure: not trained yet. Plan for 2026-11-03: Colab T4, `training/train_enclosure_colab.ipynb` + `training/enclosure_dataset.zip`, then export ONNX, benchmark on the Pi, wrong-detections write-up.
+- Raw photos (`app/mydata_enc/`, `app/mydata_enc_hands/`) are local only, not in git; the labelled dataset is in `evidence/M1/04_dataset_v1/dataset/`.

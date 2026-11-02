@@ -14,7 +14,7 @@
 | Known issues | Touching parts are boxed as one group, so boxes are not always tight; shadowed undersides are sometimes cut off; the test set has only 6 good + 7 defective images, so accuracy will be rough; the two variants look alike at 480 px and may be hard to separate; single camera, single mat, single lighting setup |
 | Your changes | n/a (own data) |
 | Where | `evidence/M1/04_dataset_v1/dataset/` (images + labels + split.csv + data.yaml) |
-| Your training run | in progress 2026-11-02 (YOLO11n, 480 px, 60 epochs, CPU on the Pi); results not yet available |
+| Your training run | Not done yet. A CPU run on the Pi was started on 2026-11-02 and stopped at about epoch 15 (not used, no results kept). Training is planned on Google Colab T4 with `training/train_enclosure_colab.ipynb` and `training/enclosure_dataset.zip`. |
 
 ## Earlier baseline: Bolts and Nuts v8 (not my data)
 
