@@ -1,0 +1,7 @@
+path: .
+train: train/images
+val: val/images
+test: test/images
+names:
+  0: enclosure_good
+  1: enclosure_defective
