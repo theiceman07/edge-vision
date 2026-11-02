@@ -1,0 +1,2 @@
+before: temp=36.2'C
+throttled=0x0

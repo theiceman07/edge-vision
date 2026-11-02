@@ -1,0 +1,13 @@
+{
+  "host": "claude",
+  "machine": "aarch64",
+  "model": "app/best.onnx",
+  "imgsz": 320,
+  "frames_measured": 280,
+  "mean_ms": 35.21,
+  "median_ms": 33.84,
+  "p95_ms": 40.4,
+  "fps_from_mean": 28.4,
+  "timestamp": "2026-11-02T12:27:49"
+} 
+saved results/bench_claude_20261102_122749.json

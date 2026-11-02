@@ -124,6 +124,14 @@ const post=b=>fetch('/api/control',{method:'POST',body:JSON.stringify(b)});
 function setFeed(on){const v=$('vid');if(on&&!v.getAttribute('src')){v.src='/video?'+Date.now()}
  if(!on&&v.getAttribute('src')){v.removeAttribute('src')}
  v.style.display=on?'block':'none';$('off').style.display=on?'none':'flex'}
+// stream watchdog: Chromium can drop the long-lived MJPEG stream (black picture); reconnect when that happens
+(function(){const v=$('vid'),cv=document.createElement('canvas');cv.width=16;cv.height=12;const cx=cv.getContext('2d',{willReadFrequently:true});let bad=0;
+ const reload=()=>{if(running){v.src='/video?'+Date.now()}};
+ v.addEventListener('error',()=>setTimeout(reload,1000));
+ setInterval(()=>{if(!running||!v.getAttribute('src')){bad=0;return}
+  let blank=!v.complete||!v.naturalWidth;
+  if(!blank){try{cx.drawImage(v,0,0,16,12);const d=cx.getImageData(0,0,16,12).data;let s=0;for(let i=0;i<d.length;i+=4)s+=d[i]+d[i+1]+d[i+2];blank=s<30}catch(e){}}
+  bad=blank?bad+1:0;if(bad>=2){bad=0;reload()}},2000)})();
 $('start').onclick=()=>post({action:'start'});$('stopb').onclick=()=>post({action:'stop'});
 $('th').oninput=e=>{$('tv').textContent=e.target.value+'%';post({conf:e.target.value/100})};
 $('reset').onclick=()=>post({reset:true});

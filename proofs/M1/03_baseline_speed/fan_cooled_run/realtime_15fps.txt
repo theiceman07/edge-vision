@@ -1,0 +1,30 @@
+Loading app/best.onnx for ONNX Runtime inference...
+Using ONNX Runtime 1.31.1 with CPUExecutionProvider
+{
+  "target_fps": 15.0,
+  "seconds": 600.0,
+  "conf": 0.4,
+  "frames_produced": 9001,
+  "frames_processed": 8677,
+  "frames_skipped": 324,
+  "effective_detection_fps": 14.46,
+  "latency_ms": {
+    "median": 37.4,
+    "p95": 73.7,
+    "max": 306.1
+  },
+  "capture_to_result_ms": {
+    "median": 38.6,
+    "p95": 91.9,
+    "max": 335.0
+  },
+  "frame_budget_ms": 66.7,
+  "frames_over_budget": 511,
+  "precision": 0.925,
+  "recall": 0.913,
+  "tp_fp_fn": [
+    44630,
+    3598,
+    4242
+  ]
+}
