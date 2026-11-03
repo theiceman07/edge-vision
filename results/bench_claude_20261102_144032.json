@@ -1,0 +1,12 @@
+{
+  "host": "claude",
+  "machine": "aarch64",
+  "model": "app/best.onnx",
+  "imgsz": 320,
+  "frames_measured": 280,
+  "mean_ms": 52.38,
+  "median_ms": 50.85,
+  "p95_ms": 62.78,
+  "fps_from_mean": 19.09,
+  "timestamp": "2026-11-02T14:40:32"
+}

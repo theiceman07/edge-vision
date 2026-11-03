@@ -3,6 +3,7 @@ services:
   vision:
     build: .
     image: edge-vision
+    command: ["python", "server.py", "--model", "enclosure_int8.onnx", "--imgsz", "480", "--det-fps", "15"]
     restart: unless-stopped        # comes back after crash and after power cycle (docker enabled at boot)
     ports: ["5000:5000"]
     devices:
