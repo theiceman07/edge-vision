@@ -20,3 +20,27 @@ The causes below are my visual reading of each image, not proven by an experimen
 - At least 4 of the 6 false positives (2, 3, 5, 6) are annotation problems in the dataset (grouped boxes, unlabelled objects, loose boxes), not model errors, so mAP understates the model slightly on this test set.
 - Real model weaknesses: overlapping/occluded bolts (4, 7, 9) and thin tall bolts (8, 9). Fixes: more such images, higher input size than 320, or tighter labels.
 - Next step for your own part: take your own photos under the same camera/light and repeat this analysis.
+
+---
+
+# Enclosure detector: 10 wrong detections (test split, app/enclosure.onnx, conf >= 0.25, IoU >= 0.5)
+Run: own script over `training/enclosure_ds/test` (16 images, 18 labelled boxes). Total errors: 20 (4 false positives, 6 class confusions, 10 misses; each class confusion also leaves its labelled box unmatched, so it shows up again as a miss).
+The causes are hypotheses; I have NOT yet checked each image by eye or tested them with an experiment. Images are in `enclosure/test_pred_480/`.
+
+| # | Type | Image | What happened | Likely cause (unverified) |
+|---|---|---|---|---|
+| 1 | class confusion (good 0.81, gt defective) | enclosure_defective_b112 | Defective enclosure predicted good | Defect is small relative to the whole part at 480 px |
+| 2 | class confusion x2 (good 0.91, 0.78, gt defective) | enclosure_defective_b116 | Two defective enclosures both called good | Same as #1; also two parts in frame |
+| 3 | class confusion (good 0.89, gt defective) | enclosure_defective_b147 | Defective called good, high confidence | Defect not visible from this placement/angle, or too few similar training images |
+| 4 | class confusion (good 0.80, gt defective) | enclosure_defective_b151 | Defective called good | Same family as #1 and #3 |
+| 5 | false positive x2 (defective 0.91, 0.77) + missed | enclosure_defective_b139 | Defective boxes predicted but not overlapping the labelled box (IoU < 0.5) | Box placement mismatch (loose or shifted label, or defect-only box vs whole-part box) |
+| 6 | class confusion x2 (defective 0.95, 0.90, gt good) | enclosure_good_b70 | Good enclosures called defective with very high confidence | Marks, lighting or shadows on a good part read as a defect |
+| 7 | class confusion (defective 0.71, gt good) | enclosure_good_b77 | Good enclosure called defective | Same as #6 |
+| 8 | false positive (defective 0.26) | enclosure_good_b36 | Extra defective box on a good part, barely over threshold | Low-confidence noise; goes away at conf 0.40 |
+| 9 | missed good | enclosure_good_b70 | Labelled good boxes unmatched (the same two boxes as #6) | Result of the class confusion in #6 |
+| 10 | missed defective | enclosure_defective_b116 | Both labelled defective boxes unmatched (same boxes as #2) | Result of the class confusion in #2 |
+
+## What this tells us
+- Most errors are good vs defective swaps, not missed enclosures: the detector finds the part but cannot reliably tell the classes apart. The swaps go both ways with high confidence (0.8-0.95), so raising the confidence threshold will not fix it.
+- Likely fixes: more defective and good examples at varied angles/light, 640 px input so small defects have more pixels, and checking that labels (whole part vs defect) are consistent.
+- 16 test images is a very small sample; treat the percentages as rough.

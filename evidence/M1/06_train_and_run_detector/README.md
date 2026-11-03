@@ -2,7 +2,7 @@
 
 **Checklist:** I show mAP@0.5, precision, recall, confusion matrix vs the target, and explain 10 wrong detections
 
-**Status:** PARTIAL
+**Status:** PARTIAL (enclosure trained and written up; numbers weak, see RESULTS.md)
 
 **Notes:** Done for nuts and bolts (training/results, WRONG_DETECTIONS.md). Repeat for the enclosure detector.
 
