@@ -1,0 +1,12 @@
+{
+  "host": "claude",
+  "machine": "aarch64",
+  "model": "/home/juice/edge computing/edge-vision/app/enclosure_int8.onnx",
+  "imgsz": 480,
+  "frames_measured": 280,
+  "mean_ms": 68.33,
+  "median_ms": 66.83,
+  "p95_ms": 78.58,
+  "fps_from_mean": 14.63,
+  "timestamp": "2026-11-03T10:38:14"
+}

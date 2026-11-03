@@ -10,11 +10,11 @@ Status: HAVE = evidence exists, PARTIAL = some evidence, IN PROGRESS = being wor
 | M1 | Dataset v1 | 4 | IN PROGRESS | [04_dataset_v1](evidence/M1/04_dataset_v1) |
 | M1 | Correct split | 2 | PARTIAL | [05_correct_split](evidence/M1/05_correct_split) |
 | M1 | Train and run detector | 5 | PARTIAL | [06_train_and_run_detector](evidence/M1/06_train_and_run_detector) |
-| M2 | Export to ONNX | 3 | PARTIAL | [01_export_onnx](evidence/M2/01_export_onnx) |
+| M2 | Export to ONNX | 3 | HAVE | [01_export_onnx](evidence/M2/01_export_onnx) |
 | M2 | Convert and run live | 4 | PARTIAL | [02_convert_and_run_live](evidence/M2/02_convert_and_run_live) |
 | M2 | Accuracy check | 4 | HAVE | [03_accuracy_check](evidence/M2/03_accuracy_check) |
 | M2 | Fair benchmark | 4 | PARTIAL | [04_fair_benchmark](evidence/M2/04_fair_benchmark) |
-| M2 | CPU vs accelerator + stack | 2 | TODO | [05_cpu_vs_accelerator](evidence/M2/05_cpu_vs_accelerator) |
+| M2 | CPU vs accelerator + stack | 2 | HAVE | [05_cpu_vs_accelerator](evidence/M2/05_cpu_vs_accelerator) |
 | M2 | Own target and trade-off | 3 | HAVE | [06_own_target_tradeoff](evidence/M2/06_own_target_tradeoff) |
 | M3 | Decision rule sheet | 3 | PARTIAL | [01_decision_rule_sheet](evidence/M3/01_decision_rule_sheet) |
 | M3 | Two-stream pipeline | 4 | TODO | [02_two_stream_pipeline](evidence/M3/02_two_stream_pipeline) |

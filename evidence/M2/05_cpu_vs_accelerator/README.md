@@ -2,11 +2,12 @@
 
 **Checklist:** I show the CPU vs accelerator table and draw the software stack
 
-**Status:** TODO
+**Status:** HAVE
 
 **Notes:** Pi 5 has no accelerator fitted: show CPU FP32 vs CPU INT8 (and say no accelerator). Draw the software stack.
 
 ## Evidence files in this folder
-(none yet)
+- TABLE_AND_STACK.md
+
 
 Rules: only numbers measured by me on my own hardware; commit on branch `arjun` with the milestone in the message.
