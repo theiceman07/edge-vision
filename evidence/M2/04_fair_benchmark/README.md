@@ -24,3 +24,6 @@ Against a 15 FPS target this FP32 model at 480 does NOT make it (about 8.5 FPS).
 Same method (20 warm-up + 280 timed, batch 1, inference only), same Pi, 2026-11-03.
 Median 66.8 ms, mean 68.3 ms, p95 78.6 ms, 14.6 FPS from the mean. Size 4.4 MB. Temperature 36.2 C -> 45.0 C, `get_throttled` 0x0 (no throttling).
 FP32 -> INT8: median 114.9 -> 66.8 ms (1.72x faster), size 10.6 -> 4.4 MB. This is just under 15 FPS and does not include pre/post-processing or NMS, so the full pipeline will be slower than 14.6 FPS.
+
+## Live camera runs (same method, frames from the USB camera instead of test images)
+INT8: median 68.3 ms, p95 81.6 ms, 14.3 FPS. FP32: median 120.0 ms, p95 140.2 ms, 8.2 FPS. `get_throttled` 0x0, 43.9 C afterwards. Files: `enclosure_int8_480_bench_LIVE_camera.json`, `enclosure_fp32_480_bench_LIVE_camera.json`.

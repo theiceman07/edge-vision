@@ -1,0 +1,14 @@
+{
+  "model": "/home/juice/edge computing/edge-vision/app/enclosure_int8.onnx",
+  "seconds": 120.0,
+  "camera_frames_produced": 3576,
+  "camera_fps": 29.8,
+  "frames_processed": 1469,
+  "processed_fps": 12.24,
+  "frames_dropped_by_latest_frame_policy": 2107,
+  "latency_ms_median": 97.0,
+  "latency_ms_mean": 98.2,
+  "latency_ms_p95": 118.7,
+  "latency_ms_max": 360.2,
+  "state_changes": []
+}

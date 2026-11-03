@@ -11,9 +11,9 @@ Status: HAVE = evidence exists, PARTIAL = some evidence, IN PROGRESS = being wor
 | M1 | Correct split | 2 | PARTIAL | [05_correct_split](evidence/M1/05_correct_split) |
 | M1 | Train and run detector | 5 | PARTIAL | [06_train_and_run_detector](evidence/M1/06_train_and_run_detector) |
 | M2 | Export to ONNX | 3 | HAVE | [01_export_onnx](evidence/M2/01_export_onnx) |
-| M2 | Convert and run live | 4 | PARTIAL | [02_convert_and_run_live](evidence/M2/02_convert_and_run_live) |
+| M2 | Convert and run live | 4 | HAVE | [02_convert_and_run_live](evidence/M2/02_convert_and_run_live) |
 | M2 | Accuracy check | 4 | HAVE | [03_accuracy_check](evidence/M2/03_accuracy_check) |
-| M2 | Fair benchmark | 4 | PARTIAL | [04_fair_benchmark](evidence/M2/04_fair_benchmark) |
+| M2 | Fair benchmark | 4 | HAVE | [04_fair_benchmark](evidence/M2/04_fair_benchmark) |
 | M2 | CPU vs accelerator + stack | 2 | HAVE | [05_cpu_vs_accelerator](evidence/M2/05_cpu_vs_accelerator) |
 | M2 | Own target and trade-off | 3 | HAVE | [06_own_target_tradeoff](evidence/M2/06_own_target_tradeoff) |
 | M3 | Decision rule sheet | 3 | PARTIAL | [01_decision_rule_sheet](evidence/M3/01_decision_rule_sheet) |
@@ -21,7 +21,7 @@ Status: HAVE = evidence exists, PARTIAL = some evidence, IN PROGRESS = being wor
 | M3 | Debounce | 4 | PARTIAL | [03_debounce](evidence/M3/03_debounce) |
 | M3 | Actuator fires | 3 | PARTIAL | [04_actuator_fires](evidence/M3/04_actuator_fires) |
 | M3 | Docker | 4 | TODO | [05_docker](evidence/M3/05_docker) |
-| M3 | End-to-end latency | 2 | TODO | [06_end_to_end_latency](evidence/M3/06_end_to_end_latency) |
+| M3 | End-to-end latency | 2 | PARTIAL | [06_end_to_end_latency](evidence/M3/06_end_to_end_latency) |
 | M4 | Sensor data | 3 | TODO | [01_sensor_data](evidence/M4/01_sensor_data) |
 | M4 | Anomaly model | 4 | TODO | [02_anomaly_model](evidence/M4/02_anomaly_model) |
 | M4 | False alarms | 2 | TODO | [03_false_alarms](evidence/M4/03_false_alarms) |
