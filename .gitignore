@@ -12,3 +12,6 @@ app/mydata/
 *.zip
 *.bak
 *.stackdump
+
+# too large for GitHub (>100 MB); download separately
+wheels/torch-*.whl
